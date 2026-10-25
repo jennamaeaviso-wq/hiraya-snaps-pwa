@@ -1,16 +1,10 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#b96e7b">
-<meta name="description" content="Hiraya Snaps — Receipts of Your Moments">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="./manifest.json">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./icon-192.png">
 <title>Hiraya Snaps — Receipts of Your Moments</title>
 <style>
 :root{--ink:#3f3535;--muted:#8e7e7c;--cream:#fffaf3;--paper:#fffdf9;--pink:#f3cbd0;--rose:#b96e7b;--sage:#cbd8c4;--wood:#d8b99a;--line:#eaded6;--shadow:0 18px 55px #6e4b3c18;--radius:24px}
@@ -357,8 +351,7 @@ const defaultSettings = {
   freeMode:true, boothMode:'regular', manualPayment:true, paymentMethods:{cash:true,qrph:true}, cashCodes:'K7L2M9Q5\nCUST4M82\nG5H8J2K1\nRENT6B43\nX9P3W7L2\nPAY5CASH\nM4N8B6V2\nB7O2T9H5\nQ6R1S8T4\nC8D4F7G2\nCASH9V31\nZ2X7C5B8\nT3R6P9M1\nA5S8D2F7\nVIP4K829\nH6J3L8N5\nW7E2R9T4\nRENT8X52\nF4G7H2J9\nPAY8M3C6', pricePolaroid:100, price2:120, price3:150, price4:180, priceStrip:150, printMorePrice:80,
   paymentQR:'', downloadBaseURL:'', ownerPIN:'2468', logoText:'✦', footer:'a little moment, made forever', shutter:true, countdown:3
 };
-function readLocalObject(key){try{const raw=localStorage.getItem(key);if(!raw)return {};const value=JSON.parse(raw);return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch(e){console.warn('Could not read saved '+key+'; using defaults.',e);return {};}}
-let settings = {...defaultSettings, ...readLocalObject('hirayaSettings')};
+let settings = {...defaultSettings, ...JSON.parse(localStorage.getItem('hirayaSettings') || '{}')};
 settings.paymentMethods={cash:true,qrph:true,...(settings.paymentMethods||{})};
 settings.cashCodes=String(settings.cashCodes ?? defaultSettings.cashCodes);
 settings.layoutOptions=Array.isArray(settings.layoutOptions)&&settings.layoutOptions.length?settings.layoutOptions:[{id:'polaroid',name:'Polaroid',price:settings.pricePolaroid,printMorePrice:settings.printMorePrice},{id:'shot2',name:'2 Shots',price:settings.price2,printMorePrice:settings.printMorePrice},{id:'shot3',name:'3 Shots',price:settings.price3,printMorePrice:settings.printMorePrice},{id:'shot4',name:'4 Shots',price:settings.price4,printMorePrice:settings.printMorePrice},{id:'strip',name:'Photo Strip',price:settings.priceStrip,printMorePrice:settings.printMorePrice}];
@@ -382,7 +375,7 @@ const templateDefs = [
  {name:'Minimal Cream',bg:'#fffdf8',accent:'#89786a',title:'H I R A Y A',footer:'receipts of your moments',kind:'minimal'}
 ];
 let templates = [...templateDefs];
-try { const saved=JSON.parse(localStorage.getItem('hirayaTemplates')||'null'); if(Array.isArray(saved)&&saved.length) templates=saved; } catch(e) { console.warn('Could not read saved templates; using defaults.',e); }
+try { const saved=JSON.parse(localStorage.getItem('hirayaTemplates')||'null'); if(saved?.length) templates=saved; } catch {}
 // Remove the existing Wedding templates as requested; keep other event templates intact.
 templates=templates.filter(t=>(t.event||'Wedding')!=='Wedding');
 templates.forEach(t=>{if(!t.event)t.event='Wedding';});
@@ -395,9 +388,9 @@ async function putLargeAsset(key,value){const db=await openAssetDB();try{await n
 async function getLargeAsset(key){try{const db=await openAssetDB();try{return await new Promise((resolve,reject)=>{const req=db.transaction(HIRAYA_ASSET_STORE,'readonly').objectStore(HIRAYA_ASSET_STORE).get(key);req.onsuccess=()=>resolve(req.result||'');req.onerror=()=>reject(req.error||new Error('IndexedDB read failed'));});}finally{db.close();}}catch(e){console.warn('Could not restore Hiraya image asset:',key,e);return '';}}
 function stripAssets(obj,prefix,assetKeys){if(!obj||typeof obj!=='object')return obj;const copy=Array.isArray(obj)?obj.map((v,i)=>stripAssets(v,`${prefix}.${i}`,assetKeys)):{...obj};for(const [key,value] of Object.entries(copy)){if(typeof value==='string'&&value.startsWith('data:image/')){assetKeys.push([`${prefix}.${key}`,value]);copy[key]='';}else if(value&&typeof value==='object'){copy[key]=stripAssets(value,`${prefix}.${key}`,assetKeys);}}return copy;}
 async function persistAssets(assets){for(const [key,value] of assets){try{await putLargeAsset(key,value);}catch(e){console.error('Could not store Hiraya image in IndexedDB:',key,e);throw e;}}}
-function writeCompactLocal(key,value){const serialized=JSON.stringify(value);try{localStorage.setItem(key,serialized);return true;}catch(firstError){/* The value has already had all image data removed. Retry after replacing only this compact settings key. */try{const previous=localStorage.getItem(key);localStorage.removeItem(key);try{localStorage.setItem(key,serialized);return true;}catch(secondError){if(previous!==null){try{localStorage.setItem(key,previous);}catch(restoreError){console.error('Could not restore previous local data for '+key,restoreError);}}console.error('Browser storage quota exceeded for '+key,secondError);toast('Browser storage is full. Your previous saved data was preserved where possible. Free some browser storage, then try saving again.');return false;}}catch(secondError){console.error('Browser storage quota exceeded for '+key,secondError);toast('Browser storage is full. Settings could not be saved.');return false;}}}
-function saveSettings(){const assets=[];const safe=stripAssets(settings,'settings',assets);persistAssets(assets).catch(e=>{console.error('Could not store image assets:',e);toast('Could not save an uploaded image locally. Try a smaller image or free device storage.');});return writeCompactLocal('hirayaSettings',safe);}
-function saveTemplates(){const assets=[];const safe=stripAssets(templates,'templates',assets);persistAssets(assets).catch(e=>{console.error('Could not store template image assets:',e);toast('Could not save a template image locally. Try a smaller image or free device storage.');});return writeCompactLocal('hirayaTemplates',safe);}
+function writeCompactLocal(key,value){const serialized=JSON.stringify(value);try{localStorage.setItem(key,serialized);return true;}catch(firstError){try{localStorage.removeItem(key);localStorage.setItem(key,serialized);return true;}catch(secondError){console.error('Browser storage quota exceeded for '+key,secondError);toast('Browser storage is full. Settings could not be saved locally; try smaller layout-guide images.');return false;}}}
+function saveSettings(){const assets=[];const safe=stripAssets(settings,'settings',assets);persistAssets(assets).catch(e=>{console.error('Could not store image assets:',e);toast('Could not save an uploaded image locally. Try a smaller image.');});return writeCompactLocal('hirayaSettings',safe);}
+function saveTemplates(){const assets=[];const safe=stripAssets(templates,'templates',assets);persistAssets(assets).catch(e=>{console.error('Could not store template image assets:',e);toast('Could not save a template image locally. Try a smaller image.');});return writeCompactLocal('hirayaTemplates',safe);}
 async function restoreLargeAssets(){const walk=async(obj,prefix)=>{if(!obj||typeof obj!=='object')return;for(const [key,value] of Object.entries(obj)){const path=`${prefix}.${key}`;if(value===''&&/(layoutGuideImage|qrCode|paymentQR|backgroundImage|photoElement|frameImage)$/.test(key)){const restored=await getLargeAsset(path);if(restored)obj[key]=restored;}else if(value&&typeof value==='object')await walk(value,path);}};await walk(settings,'settings');await walk(templates,'templates');/* Migrate legacy Base64 data out of localStorage after assets have been restored. */saveSettings();saveTemplates();}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function money(n){return '₱'+Number(n||0).toLocaleString('en-PH',{maximumFractionDigits:2});}
@@ -690,15 +683,6 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerC
 window.HS={start,chooseLayout,continuePayment,setPaymentMethod,setPaymentReference,setCashCode,submitQrPayment,enterCashCode,ownerConfirmPayment,ownerReceivePayment,ownerRejectPayment,cancelPayment,cancelCamera,home,setZoom,setMirror,setCountdown,capture,selectShot,retakeAll,usePhotos,toggleShotMirror,retakeThisOnce,doneWithPhotos,selectTemplate,setFrameEvent,backToCamera,openEditor,activeSlot,cropZoom,resetCrop,backToTemplates,showFinal,closeFinal,confirmFinal,backToEditor,printFinal,printMore,downloadPhotos,boomerang,showDownloadQR,newSession,openAdmin,verifyOwnerPin,pinKey,pinBackspace,pinClear,unlockAdmin,signOutOwner,clearCompletedTransactions,loadTemplateEditor,saveTemplateEdit,addTemplate,resetTemplates,toggleFixedTemplate,addCashCode,saveAdmin,closeAdmin,showOwnerTab,setBoothMode,addLayoutRow,uploadLayoutQR,openLayoutGuidePopup,closeLayoutGuidePopup,saveLayoutGuide,clearLayoutGuideImage,openPhotoSizePopup,closePhotoSizePopup,savePhotoSize,removePhotoSize,filterFrameTemplates,openAddEventType,closeAddEventType,addEventType,openEventTemplates,closeEventTemplates,chooseEventTemplate,openAddEventTemplate,closeAddEventTemplate,addEventTemplate,openTemplateDesignEditor,togglePaperSizeLock,updateTemplatePreview,uploadTemplateAsset,clearTemplateAsset,closeTemplateDesignEditor,saveTemplateDesign};
 restoreLargeAssets().finally(()=>render());
 })();
-</script>
-<script>
-// Installable/offline shell. Firebase writes, sign-in and payment verification still require internet.
-if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' })
-      .catch(error => console.warn('Hiraya Snaps offline support could not be registered:', error));
-  });
-}
 </script>
 </body>
 </html>
