@@ -1,0 +1,23 @@
+HIRAYA SNAPS — ONLINE + OFFLINE PWA (Android phone and tablet)
+
+FILES TO PUT IN THE ROOT OF YOUR EXISTING GitHub Pages REPOSITORY:
+- index.html  (the updated app; use this as the site entry file)
+- manifest.json
+- sw.js
+- icon.svg
+- icon-192.png
+- icon-512.png
+
+IMPORTANT:
+1. Keep the Firebase project configuration already present in index.html. Do not change Firebase database rules to public.
+2. Upload these files to the SAME folder/root where your current GitHub Pages index.html lives. Replace only index.html and add the five support files. Keep the rest of your repository unchanged.
+3. Commit changes, wait for GitHub Pages to deploy, then open the site online on the phone/tablet and reload once or twice so the service worker can cache the app shell and Firebase SDK scripts.
+4. In Chrome on Android, open the site menu (⋮) and choose Install app or Add to Home screen.
+5. Test offline by first opening the installed app while online, then turn on Airplane mode and reopen it. The app shell and locally saved settings/images can work offline. Firebase sign-in, cross-device sync, QR payment submission/verification, and cloud transactions require internet and will not work offline.
+6. Layout guide and template images are kept in this device's IndexedDB to prevent localStorage quota errors. In this version those image files are local to each device; the Firebase database syncs the non-image settings/templates. Do not clear site storage if you have unsynced local images/settings.
+7. The app must be hosted over HTTPS (GitHub Pages is HTTPS). Opening index.html directly as a file will not enable service workers/installability.
+
+STORAGE FIX INCLUDED:
+- Large image data is removed from localStorage and placed in IndexedDB.
+- Compact settings are saved separately, with safer handling of quota errors and corrupt legacy settings.
+- Existing design and feature markup are retained.
