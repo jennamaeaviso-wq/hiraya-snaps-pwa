@@ -9,11 +9,7 @@
   "orientation": "any",
   "background_color": "#fffaf3",
   "theme_color": "#b96e7b",
-  "categories": [
-    "photo",
-    "entertainment",
-    "utilities"
-  ],
+  "categories": ["photo", "entertainment", "utilities"],
   "icons": [
     {
       "src": "/hiraya-snaps-pwa/icon-192.png",
