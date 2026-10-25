@@ -1,4 +1,4 @@
-const CACHE_NAME = "hiraya-snaps-v1";
+const CACHE_NAME = "hiraya-snaps-v2";
 
 const APP_FILES = [
   "/hiraya-snaps-pwa/",
@@ -29,7 +29,11 @@ self.addEventListener("activate", (event) => {
     caches.keys().then(async (keys) => {
       await Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter(
+            (key) =>
+              key.startsWith("hiraya-snaps-") &&
+              key !== CACHE_NAME
+          )
           .map((key) => caches.delete(key))
       );
 
@@ -71,8 +75,10 @@ self.addEventListener("fetch", (event) => {
 
         if (request.mode === "navigate") {
           return (
-            await caches.match("/hiraya-snaps-pwa/index.html")
-          ) || Response.error();
+            (await caches.match(
+              "/hiraya-snaps-pwa/index.html"
+            )) || Response.error()
+          );
         }
 
         return Response.error();
